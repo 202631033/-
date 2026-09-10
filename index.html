@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>오늘 뭐 먹지? | 오늘 먹을 저녁 메뉴 추천</title>
+    <!-- FontAwesome (아이콘) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Noto Sans KR) -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FF5E3A;
+            --primary-hover: #E04826;
+            --bg-gradient: linear-gradient(135deg, #FFEFBA 0%, #FFFFFF 100%);
+            --card-bg: #FFFFFF;
+            --text-dark: #2C3E50;
+            --text-muted: #7F8C8D;
+            --shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            --radius: 20px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans KR', sans-serif;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: var(--text-dark);
+        }
+
+        header {
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 25px;
+        }
+
+        header h1 {
+            font-size: 2.2rem;
+            font-weight: 900;
+            color: var(--primary);
+            margin-bottom: 8px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.05);
+        }
+
+        header p {
+            font-size: 1rem;
+            color: var(--text-muted);
+        }
+
+        /* Filter Tags */
+        .filter-container {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 600px;
+        }
+
+        .filter-btn {
+            background-color: white;
+            border: 2px solid #E0E0E0;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .filter-btn.active, .filter-btn:hover {
+            border-color: var(--primary);
+            background-color: var(--primary);
+            color: white;
+        }
+
+        /* Card Stage */
+        .card-stage {
+            width: 100%;
+            max-width: 380px;
+            height: 480px;
+            perspective: 1000px;
+            margin-bottom: 30px;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+
+        .card-inner.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            background: var(--card-bg);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Front Side */
+        .card-front {
+            justify-content: center;
+            align-items: center;
+            padding: 30px;
+            border: 3px dashed #FFD1C4;
+        }
+
+        .card-front i.main-icon {
+            font-size: 5rem;
+            color: var(--primary);
+            margin-bottom: 20px;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
+            40% {transform: translateY(-20px);}
+            60% {transform: translateY(-10px);}
+        }
+
+        .card-front h2 {
+            font-size: 1.5rem;
+            color: var(--text-dark);
+            margin-bottom: 10px;
+        }
+
+        /* Back Side (Result) */
+        .card-back {
+            transform: rotateY(180deg);
+            text-align: left;
+            position: relative;
+        }
+
+        .img-wrapper {
+            position: relative;
+            width: 100%;
+            height: 55%;
+            overflow: hidden;
+        }
+
+        .menu-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .category-badge {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .like-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: white;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            transition: transform 0.2s ease;
+        }
+
+        .like-btn:active {
+            transform: scale(0.85);
+        }
+
+        .like-btn i {
+            color: #ccc;
+            font-size: 1.2rem;
+            transition: color 0.3s ease;
+        }
+
+        .like-btn.liked i {
+            color: #FF3B30;
+        }
+
+        .content-body {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            flex-grow: 1;
+        }
+
+        .menu-title {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: var(--text-dark);
+        }
+
+        .menu-desc {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+            line-height: 1.4;
+        }
+
+        .tip-box {
+            background-color: #FFF5F2;
+            border-left: 4px solid var(--primary);
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.85rem;
+            color: #555;
+        }
+
+        .tip-box strong {
+            color: var(--primary);
+        }
+
+        /* Controls */
+        .btn-container {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            max-width: 380px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            border-radius: 15px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(255, 94, 58, 0.3);
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-main {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-main:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-2px);
+        }
+
+        .btn-main:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background-color: #ECEFF1;
+            color: #455A64;
+            max-width: 60px;
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            background-color: #CFD8DC;
+        }
+
+        /* Wishlist Section */
+        .wishlist-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: white;
+            width: 100%;
+            max-width: 400px;
+            max-height: 80vh;
+            border-radius: var(--radius);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .wish-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 10px;
+            padding: 8px;
+            border-bottom: 1px solid #EEE;
+        }
+
+        .wish-item img {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .wish-title {
+            font-weight: 600;
+            flex-grow: 1;
+        }
+
+        .top-bar {
+            width: 100%;
+            max-width: 380px;
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 10px;
+        }
+
+        .wish-open-btn {
+            background: white;
+            border: 1px solid #DDD;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="top-bar">
+        <button class="wish-open-btn" onclick="openWishlist()">
+            <i class="fa-solid fa-heart" style="color: #FF3B30;"></i>
+            즐겨찾기 (<span id="wish-count">0</span>)
+        </button>
+    </div>
+
+    <header>
+        <h1>오늘 뭐 먹지?</h1>
+        <p>결정 장애를 위한 최고의 저녁 메뉴 추천기</p>
+    </header>
+
+    <!-- Category Filter -->
+    <div class="filter-container">
+        <button class="filter-btn active" onclick="setCategory('all', this)">전체</button>
+        <button class="filter-btn" onclick="setCategory('한식', this)">한식</button>
+        <button class="filter-btn" onclick="setCategory('중식', this)">중식</button>
+        <button class="filter-btn" onclick="setCategory('일식', this)">일식</button>
+        <button class="filter-btn" onclick="setCategory('양식', this)">양식</button>
+        <button class="filter-btn" onclick="setCategory('분식/기타', this)">분식/기타</button>
+    </div>
+
+    <!-- 3D Card Stage -->
+    <div class="card-stage">
+        <div class="card-inner" id="card">
+            <!-- Front -->
+            <div class="card-front">
+                <i class="fa-solid fa-utensils main-icon"></i>
+                <h2>오늘의 저녁은?</h2>
+                <p style="color: #999; font-size: 0.9rem;">아래 버튼을 눌러 카드를 뒤집어보세요!</p>
+            </div>
+            <!-- Back -->
+            <div class="card-back">
+                <div class="img-wrapper">
+                    <img id="res-img" src="" alt="메뉴 이미지" class="menu-img">
+                    <span id="res-category" class="category-badge">카테고리</span>
+                    <button class="like-btn" id="like-btn" onclick="toggleLike()">
+                        <i class="fa-solid fa-heart"></i>
+                    </button>
+                </div>
+                <div class="content-body">
+                    <div>
+                        <h3 id="res-title" class="menu-title">음식 이름</h3>
+                        <p id="res-desc" class="menu-desc">음식 설명이 들어갑니다.</p>
+                    </div>
+                    <div class="tip-box">
+                        <strong>💡 꿀조합 팁:</strong> <span id="res-tip">추천 팁</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="btn-container">
+        <button class="action-btn btn-secondary" onclick="resetCard()" title="초기화">
+            <i class="fa-solid fa-rotate-right"></i>
+        </button>
+        <button class="action-btn btn-main" onclick="recommendMenu()">
+            <i class="fa-solid fa-dice"></i> 저녁 메뉴 추천받기
+        </button>
+    </div>
+
+    <!-- Wishlist Modal -->
+    <div class="wishlist-modal" id="wishlist-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-heart" style="color: #FF3B30;"></i> 내가 찜한 메뉴</h3>
+                <button class="close-btn" onclick="closeWishlist()">&times;</button>
+            </div>
+            <div class="modal-body" id="wishlist-container">
+                <!-- Wish items will be dynamically added here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Menu Dataset with High Quality Unsplash Images
+        const menus = [
+            // 한식
+            { id: 1, name: "삼겹살", category: "한식", desc: "지글지글 구운 삼겹살에 파채와 쌈장을 곁들인 한국인의 소울푸드!", tip: "소주나 시원한 구수한 된장찌개와 함께 드세요.", img: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80" },
+            { id: 2, name: "김치찌개", category: "한식", desc: "푹 익은 신김치와 돼지고기가 들어간 얼큰하고 칼칼한 국물 요리.", tip: "계란말이나 계란후라이를 곁들이면 완벽한 한 상!", img: "https://images.unsplash.com/photo-1583224964978-2257b960c3d3?auto=format&fit=crop&w=600&q=80" },
+            { id: 3, name: "비빔밥", category: "한식", desc: "신선한 각종 나물과 고추장, 참기름을 싹싹 비벼먹는 건강식.", tip: "반숙 계란후라이 노른자를 터뜨려 드세요.", img: "https://images.unsplash.com/photo-1553163147-622ab57be1c7?auto=format&fit=crop&w=600&q=80" },
+            { id: 4, name: "닭볶음탕", category: "한식", desc: "매콤달콤한 양념에 감자와 닭고기를 넣고 자작하게 조린 요리.", tip: "남은 국물에 밥과 김가루를 넣어 볶아드세요.", img: "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80" },
+            
+            // 중식
+            { id: 5, name: "짜장면 & 탕수육", category: "중식", desc: "고소한 춘장 소스의 면 요리와 바삭한 튀김의 영원한 콤비.", tip: "고춧가루를 짜장면에 살짝 뿌려 먹으면 느끼함을 잡을 수 있어요.", img: "https://images.unsplash.com/photo-1525755662778-989d0524087e?auto=format&fit=crop&w=600&q=80" },
+            { id: 6, name: "마라탕", category: "중식", desc: "얼얼하고 매콤한 국물에 원하는 재료를 가득 넣어 먹는 중독성 끝판왕.", tip: "꿔바로우를 추가하면 매운맛을 달래기 좋습니다.", img: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80" },
+
+            // 일식
+            { id: 7, name: "초밥 (스시)", category: "일식", desc: "신선한 생선과 적당히 간이 된 밥의 깔끔한 조화.", tip: "따뜻한 우동이나 미소시루를 곁들여 드세요.", img: "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?auto=format&fit=crop&w=600&q=80" },
+            { id: 8, name: "돈카츠", category: "일식", desc: "겉은 바삭하고 속은 촉촉하고 두툼한 돼지고기 튀김 요리.", tip: "와사비를 소스에 살짝 섞어 찍어드시면 풍미가 살아납니다.", img: "https://images.unsplash.com/photo-1591814468924-caf88d1232e1?auto=format&fit=crop&w=600&q=80" },
+            { id: 9, name: "라멘", category: "일식", desc: "진한 진국 육수에 차슈와 아지타마고(간장계란)가 올라간 일본식 라면.", tip: "교자(군만두)나 맥주 한 잔을 곁들이면 최고의 저녁!", img: "https://images.unsplash.com/photo-1569718212165-3a8278d5f624?auto=format&fit=crop&w=600&q=80" },
+
+            // 양식
+            { id: 10, name: "스테이크", category: "양식", desc: "육즙이 가득한 두툼한 육류 구이로 분위기 내고 싶은 날 추천.", tip: "구운 구운 채소와 와인 한 잔을 곁들여보세요.", img: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80" },
+            { id: 11, name: "파스타", category: "양식", desc: "크림, 토마토, 오일 등 취향에 따라 즐기는 고소하고 부드러운 면요리.", tip: "마늘빵을 소스에 찍어 먹으면 별미입니다.", img: "https://images.unsplash.com/photo-1621996346565-e3def646d959?auto=format&fit=crop&w=600&q=80" },
+            { id: 12, name: "피자", category: "양식", desc: "쭉 늘어나는 치즈와 다양한 토핑이 어우러진 맛의 항연.", tip: "갈릭디핑소스와 핫소스를 듬뿍 얹어 드세요.", img: "https://images.unsplash.com/photo-1513104890138-7c749659a591?auto=format&fit=crop&w=600&q=80" },
+
+            // 분식/기타
+            { id: 13, name: "떡볶이 & 튀김", category: "분식/기타", desc: "매콤달콤한 양념 떡볶이와 바삭한 모듬 튀김의 환상 조화.", tip: "순대와 어묵 국물까지 추가하면 분식 풀코스 완성!", img: "https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=600&q=80" },
+            { id: 14, name: "치킨", category: "분식/기타", desc: "바삭한 후라이드부터 단짠 양념까지, 대한민국 대표 야식/저녁.", tip: "시원한 치맥(치킨+맥주) 또는 치콜(치킨+콜라)은 필수!", img: "https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=600&q=80" },
+            { id: 15, name: "족발 / 보쌈", category: "분식/기타", desc: "쫄깃한 족발과 야들야들한 보쌈, 쟁반국수의 조합.", tip: "무말랭이와 함께 상추쌈을 싸서 드세요.", img: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80" }
+        ];
+
+        let currentCategory = 'all';
+        let currentMenu = null;
+        let wishlist = JSON.parse(localStorage.getItem('dinner_wishlist')) || [];
+
+        // Update wishlist count on load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateWishCount();
+        });
+
+        function setCategory(cat, element) {
+            currentCategory = cat;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            element.classList.add('active');
+        }
+
+        function recommendMenu() {
+            const card = document.getElementById('card');
+            
+            // Filter menus
+            let filtered = menus;
+            if (currentCategory !== 'all') {
+                filtered = menus.filter(m => m.category === currentCategory);
+            }
+
+            // Random pick
+            const randomIndex = Math.floor(Math.random() * filtered.length);
+            const selected = filtered[randomIndex];
+            currentMenu = selected;
+
+            // If card is already flipped, flip back first then flip again
+            if (card.classList.contains('flipped')) {
+                card.classList.remove('flipped');
+                setTimeout(() => {
+                    populateCardData(selected);
+                    card.classList.add('flipped');
+                }, 400);
+            } else {
+                populateCardData(selected);
+                card.classList.add('flipped');
+            }
+        }
+
+        function populateCardData(menu) {
+            document.getElementById('res-img').src = menu.img;
+            document.getElementById('res-title').innerText = menu.name;
+            document.getElementById('res-desc').innerText = menu.desc;
+            document.getElementById('res-category').innerText = menu.category;
+            document.getElementById('res-tip').innerText = menu.tip;
+
+            // Check if liked
+            const likeBtn = document.getElementById('like-btn');
+            if (wishlist.some(item => item.id === menu.id)) {
+                likeBtn.classList.add('liked');
+            } else {
+                likeBtn.classList.remove('liked');
+            }
+        }
+
+        function resetCard() {
+            const card = document.getElementById('card');
+            card.classList.remove('flipped');
+        }
+
+        function toggleLike() {
+            if (!currentMenu) return;
+
+            const index = wishlist.findIndex(item => item.id === currentMenu.id);
+            const likeBtn = document.getElementById('like-btn');
+
+            if (index > -1) {
+                wishlist.splice(index, 1);
+                likeBtn.classList.remove('liked');
+            } else {
+                wishlist.push(currentMenu);
+                likeBtn.classList.add('liked');
+            }
+
+            localStorage.setItem('dinner_wishlist', JSON.stringify(wishlist));
+            updateWishCount();
+        }
+
+        function updateWishCount() {
+            document.getElementById('wish-count').innerText = wishlist.length;
+        }
+
+        function openWishlist() {
+            const modal = document.getElementById('wishlist-modal');
+            const container = document.getElementById('wishlist-container');
+            
+            container.innerHTML = '';
+
+            if (wishlist.length === 0) {
+                container.innerHTML = '<p style="text-align:center; color:#888; padding: 20px;">찜한 메뉴가 없습니다.</p>';
+            } else {
+                wishlist.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'wish-item';
+                    div.innerHTML = `
+                        <img src="${item.img}" alt="${item.name}">
+                        <div class="wish-title">${item.name} <small style="color:#888;">(${item.category})</small></div>
+                        <button onclick="removeFromWish(${item.id})" style="border:none; background:none; color:#999; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+
+            modal.style.display = 'flex';
+        }
+
+        function removeFromWish(id) {
+            wishlist = wishlist.filter(item => item.id !== id);
+            localStorage.setItem('dinner_wishlist', JSON.stringify(wishlist));
+            updateWishCount();
+            openWishlist(); // refresh modal
+            
+            // Sync with main card if current menu is removed
+            if (currentMenu && currentMenu.id === id) {
+                document.getElementById('like-btn').classList.remove('liked');
+            }
+        }
+
+        function closeWishlist() {
+            document.getElementById('wishlist-modal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
